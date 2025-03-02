@@ -8,7 +8,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 import numpy as np
-from model import Net  # Import the model from model.py
+import matplotlib.pyplot as plt
+#from model import Net  # Import the model from model.py
 
 # CIFAR-10 Mean and Std (calculated over the entire dataset)
 CIFAR10_MEAN = (0.4914, 0.4822, 0.4465)
@@ -193,18 +194,17 @@ lrs, losses = find_lr(model, train_loader, criterion, optimizer, device)
 best_lr = lrs[losses.index(min(losses))]
 print(f"Optimal LR: {best_lr}")
 
-
 from torch.optim.lr_scheduler import OneCycleLR
 
-EPOCHS = 50
-best_lr = 0.0004
+EPOCHS = 100
+best_lr = 2e-2
 optimizer = optim.SGD(model.parameters(), lr=best_lr, momentum=0.9)
 scheduler = OneCycleLR(
     optimizer,
-    max_lr=0.1,  # max_lr provided to OneCycleLR
+    max_lr=9e-2,  # max_lr provided to OneCycleLR
     steps_per_epoch=len(train_loader),
     epochs=EPOCHS,
-    div_factor=(0.1/best_lr),   # Determines starting LR
+    div_factor=((10*9.0)/(6.0)),   # Determines starting LR
     final_div_factor=1e4
 )
 
@@ -213,5 +213,5 @@ for epoch in range(EPOCHS):
     train(model, device, train_loader, optimizer,scheduler, epoch)
     test(model, device, test_loader)
     print(f"Learning Rate = {optimizer.param_groups[0]['lr']}\n")
-    if (test_acc[-1] > 86):
+    if (test_acc[-1] > 88):
       break

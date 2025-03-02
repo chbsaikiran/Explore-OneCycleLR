@@ -5,20 +5,35 @@ dropout_value = 0.05
 
 class DepthwiseSeparableConv(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, padding=1):
+        # assume input shape 28x28x32 and we want output of 64 channels
+        # so in_channels = 32 out_channels = 64
         super(DepthwiseSeparableConv, self).__init__()
+        self.in_channels = in_channels
         self.depthwise = nn.Conv2d(
-            in_channels, in_channels, kernel_size, stride, padding, groups=in_channels
-        )
-        self.pointwise = nn.Sequential(nn.Conv2d(in_channels, out_channels, kernel_size=1),
+            1, 1, kernel_size, stride, padding, bias=False
+        ) # 28x28x1 convolved with 3x3 to produce 28x28x1
+        self.pointwise = nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False) # 28x28x32 convolved with 1x1 to produce 28x28x64
+        self.relu_and_norm_and_dropout = nn.Sequential(
         nn.ReLU(),
         nn.BatchNorm2d(out_channels),
         nn.Dropout(dropout_value)
         )
 
     def forward(self, x):
-        x = self.depthwise(x)
-        x = self.pointwise(x)
-        return x
+        # assume input shape 28x28x32 and we want output of 64 channels
+        outputs = []
+        ch_num = 0
+        for ch_num in range(self.in_channels):
+            x1 = x[:,ch_num,:,:]
+            ch_num = ch_num + 1
+            x1 = x1.view(x1.shape[0],1,x1.shape[1],x1.shape[2])
+            out_depthwise = self.depthwise(x1)
+            outputs.append(out_depthwise)
+        stacked_output = torch.stack(outputs, dim=-1) # 28x28x32
+        stacked_output = stacked_output.view(stacked_output.shape[0],stacked_output.shape[4],stacked_output.shape[2],stacked_output.shape[3])
+        out = self.pointwise(stacked_output) # 28x28x64
+        out = self.relu_and_norm_and_dropout(out)
+        return out
 
 class Net(nn.Module):
     def __init__(self):
